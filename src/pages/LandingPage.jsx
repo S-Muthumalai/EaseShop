@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
+
 export const Navbar = () => {
   const {user}=useAuth();
   const {getCartCount}=useCart();

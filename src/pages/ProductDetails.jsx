@@ -1,44 +1,59 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useCart } from "./CartContext";
-import phone from './images/phone.jpg';
-import laptop from './images/lap.jpg';
-import headphones from './images/headphone.jpg';
-import smartwatch from './images/smartwatch.jpg';
 import { Navbar } from "./LandingPage";
-
-// Product Data
-const products = [
-  { id: 1, name: "Smartphone", price: 699, image: phone, description: "A high-end smartphone with the latest features.", category: "phone" },
-  { id: 2, name: "Laptop", price: 999, image: laptop, description: "A powerful laptop with high performance.", category: "laptop" },
-  { id: 3, name: "Headphones", price: 199, image: headphones, description: "Noise-canceling headphones for great audio quality.", category: "headphones" },
-  { id: 4, name: "Smartwatch", price: 299, image: smartwatch, description: "A stylish smartwatch with health tracking.", category: "smartwatch" },
-  { id: 5, name: "Smartphone", price: 699, image: phone, description: "A high-end smartphone with the latest features.", category: "phone" },
-  { id: 6, name: "Laptop", price: 999, image: laptop, description: "A powerful laptop with high performance.", category: "laptop" },
-  { id: 7, name: "Headphones", price: 199, image: headphones, description: "Noise-canceling headphones for great audio quality.", category: "headphones" },
-  { id: 8, name: "Smartwatch", price: 299, image: smartwatch, description: "A stylish smartwatch with health tracking.", category: "smartwatch" },
-  { id: 9, name: "Smartphone", price: 999, image: phone, description: "A high-end smartphone with the latest features.", category: "phone" },
-  { id: 10, name: "Laptop", price: 999, image: laptop, description: "A powerful laptop with high performance.", category: "laptop" },
-  { id: 11, name: "Headphones", price: 199, image: headphones, description: "Noise-canceling headphones for great audio quality.", category: "headphones" },
-  { id: 12, name: "Smartwatch", price: 299, image: smartwatch, description: "A stylish smartwatch with health tracking.", category: "smartwatch" },
-];
+import { db } from "../firebase"; // Import Firestore database instance
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const ProductDetails = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Find the product based on ID
-  const product1 = products.find((item) => item.id === parseInt(id));
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const productRef = doc(db, "products", id);
+        const productSnap = await getDoc(productRef);
 
-  if (!product1) {
+        if (productSnap.exists()) {
+          const productData = productSnap.data();
+          setProduct({ id: productSnap.id, ...productData });
+
+          // Fetch related products (same category, excluding current product)
+          const relatedQuery = query(
+            collection(db, "products"),
+            where("category", "==", productData.category)
+          );
+          const relatedSnap = await getDocs(relatedQuery);
+          const relatedData = relatedSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(item => item.id !== id);
+          setRelatedProducts(relatedData);
+        } else {
+          console.error("Product not found");
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return <h2 className="text-center mt-5">Loading product details...</h2>;
+  }
+
+  if (!product) {
     return <h2 className="text-center mt-5">Product not found</h2>;
   }
 
-  // Get related products (same category but not the selected product)
-  const relatedProducts = products.filter((product) => product.category === product1.category && product.id !== product1.id);
-
   return (
-    <div>
+    <div className="d-flex flex-column min-vh-100">
       {/* Navbar */}
       <Navbar />
 
@@ -46,13 +61,13 @@ const ProductDetails = () => {
       <div className="container mt-5">
         <div className="row">
           <div className="col-md-6">
-            <img src={product1.image} className="img-fluid rounded shadow h-100 w-50" alt={product1.name} />
+            <img src={product.imageUrl} className="img-fluid rounded shadow h-100 w-50" alt={product.name} />
           </div>
           <div className="col-md-6">
-            <h2>{product1.name}</h2>
-            <h4 className="text-primary">{product1.price}</h4>
-            <p>{product1.description}</p>
-            <button className="btn btn-success" onClick={() => addToCart(product1)}>Add to Cart</button>
+            <h2>{product.name}</h2>
+            <h4 className="text-primary">${product.price}</h4>
+            <p>{product.description}</p>
+            <button className="btn btn-success" onClick={() => addToCart(product)}>Add to Cart</button>
           </div>
         </div>
       </div>
@@ -62,14 +77,14 @@ const ProductDetails = () => {
         <h3 className="text-center">Explore More Products</h3>
         {relatedProducts.length > 0 ? (
           <div className="row">
-            {relatedProducts.map((product) => (
-              <div key={product.id} className="col-md-3 mb-4">
+            {relatedProducts.map((related) => (
+              <div key={related.id} className="col-md-3 mb-4">
                 <div className="card">
-                  <img src={product.image} className="card-img-top" alt={product.name} />
+                  <img src={related.imageUrl} className="card-img-top" alt={related.name} />
                   <div className="card-body text-center">
-                    <h5>{product.name}</h5>
-                    <p>{product.price}</p>
-                    <button className="btn btn-primary" onClick={() => addToCart(product)}>
+                    <h5>{related.name}</h5>
+                    <p>${related.price}</p>
+                    <button className="btn btn-primary" onClick={() => addToCart(related)}>
                       Add to Cart
                     </button>
                   </div>
@@ -83,7 +98,7 @@ const ProductDetails = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-dark text-white text-center py-3 mt-5">
+      <footer className="bg-dark text-white text-center py-3 mt-5 mt-auto">
         <p className="mb-0">© 2025 EaseShop. All Rights Reserved.</p>
       </footer>
     </div>
@@ -91,5 +106,3 @@ const ProductDetails = () => {
 };
 
 export default ProductDetails;
-
-
