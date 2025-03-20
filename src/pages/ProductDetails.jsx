@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useCart } from "./CartContext";
 import { Navbar } from "./LandingPage";
-import { db } from "../firebase"; // Import Firestore database instance
+import { db } from "../firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const ProductDetails = () => {
@@ -11,6 +11,7 @@ const ProductDetails = () => {
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [relatedLoading, setRelatedLoading] = useState(true);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -23,15 +24,7 @@ const ProductDetails = () => {
           setProduct({ id: productSnap.id, ...productData });
 
           // Fetch related products (same category, excluding current product)
-          const relatedQuery = query(
-            collection(db, "products"),
-            where("category", "==", productData.category)
-          );
-          const relatedSnap = await getDocs(relatedQuery);
-          const relatedData = relatedSnap.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(item => item.id !== id);
-          setRelatedProducts(relatedData);
+          fetchRelatedProducts(productData.category);
         } else {
           console.error("Product not found");
         }
@@ -41,6 +34,25 @@ const ProductDetails = () => {
         setLoading(false);
       }
     };
+
+    const fetchRelatedProducts = async (category) => {
+      try {
+        const relatedQuery = query(
+          collection(db, "products"),
+          where("category", "==", category)
+        );
+        const relatedSnap = await getDocs(relatedQuery);
+        const relatedData = relatedSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(item => item.id !== id);
+        setRelatedProducts(relatedData);
+      } catch (error) {
+        console.error("Error fetching related products:", error);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
     fetchProduct();
   }, [id]);
 
@@ -54,10 +66,8 @@ const ProductDetails = () => {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {/* Navbar */}
       <Navbar />
 
-      {/* Product Details Section */}
       <div className="container mt-5">
         <div className="row">
           <div className="col-md-6">
@@ -67,15 +77,18 @@ const ProductDetails = () => {
             <h2>{product.name}</h2>
             <h4 className="text-primary">${product.price}</h4>
             <p>{product.description}</p>
-            <button className="btn btn-success" onClick={() => addToCart(product)}>Add to Cart</button>
+            <button className="btn btn-success" onClick={() => addToCart(product)} disabled={loading}>
+              Add to Cart
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Related Products Section */}
       <div className="container mt-5">
         <h3 className="text-center">Explore More Products</h3>
-        {relatedProducts.length > 0 ? (
+        {relatedLoading ? (
+          <p className="text-center mt-3">Loading related products...</p>
+        ) : relatedProducts.length > 0 ? (
           <div className="row">
             {relatedProducts.map((related) => (
               <div key={related.id} className="col-md-3 mb-4">
@@ -97,7 +110,6 @@ const ProductDetails = () => {
         )}
       </div>
 
-      {/* Footer */}
       <footer className="bg-dark text-white text-center py-3 mt-5 mt-auto">
         <p className="mb-0">© 2025 EaseShop. All Rights Reserved.</p>
       </footer>

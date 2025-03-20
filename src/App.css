@@ -9,3 +9,8 @@
 .nav-item:hover .nav-link {
     color: #0d6efd !important;
   }
+  .card-img-top {
+    height: 200px; /* Adjust as needed */
+    object-fit: cover; /* Ensures images don't stretch */
+    width: 100%;
+  }

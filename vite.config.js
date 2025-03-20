@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
     server: {
       headers: {
-        "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Embedder-Policy": "credentialless",
+      "Cross-Origin-Opener-Policy": "same-origin",
       },
     },
   });

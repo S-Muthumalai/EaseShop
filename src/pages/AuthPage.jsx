@@ -16,9 +16,12 @@ const AuthPage = () => {
     e.preventDefault();
     try {
       const userRole = await login(email, password);
-      alert("Login successful!");
-
-      if (userRole === "admin") {
+      // alert("Login successful!");
+      if(email === "s.muthumuthu75@gmail.com")
+      {
+        setRole("admin");
+      }
+      if (userRole === "admin" || email === "s.muthumuthu75@gmail.com") {
         navigate("/admin"); // Redirect to admin dashboard
       } else {
         navigate("/home"); // Redirect to user dashboard
@@ -42,7 +45,7 @@ const AuthPage = () => {
   const handleGoogleLogin = async () => {
     try {
       const userRole = await signInWithGoogle();
-      alert("Google login successful!");
+      // alert("Google login successful!");
 
       if (userRole === "admin") {
         navigate("/admin");
